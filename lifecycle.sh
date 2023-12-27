@@ -1,11 +1,12 @@
 #!/bin/bash
 az login -o none
-IFS=$'\n'
 echo "The following accounts have some Lifecycle Policy:"
-for SA in $(az storage account list   -o table | awk '{print $8, $11}')
+IFS=$'\n'
+for SUBSCRIPTION in $(az account list | grep id | cut -f4 -d\")
 do
-	if [ $SA != "Name ResourceGroup" ] && [ $SA != "----------------------- -------------------------------------" ]
-	then
+	az account set -s $SUBSCRIPTION
+	for SA in $(az storage account list --subscription $SUBSCRIPTION -o table --query "[].{Name:name, RGroup:resourceGroup}" | grep -v Name | grep -v -- "-----")
+	do
 		ACCOUNT=$(echo $SA | awk '{print $1}')
 		RG=$(echo $SA | awk '{print $2}')
 		az storage account management-policy show --account-name $ACCOUNT --resource-group $RG >/dev/null 2>&1;
@@ -13,6 +14,6 @@ do
 		if [ $exit -eq 0 ]; then
 		    echo $ACCOUNT 
 		fi
-	fi
+	done
 done
 
